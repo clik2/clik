@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clicker_Moderno_Avanzado</title>
+  <style>
+    /* Fuente moderna */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Montserrat', sans-serif;
+      background: #1e1e2f;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      margin-top: 20px;
+      font-size: 3rem;
+      color: #f9ca24;
+    }
+
+    #clickButton {
+      margin: 30px auto;
+      padding: 30px 60px;
+      font-size: 2rem;
+      border: none;
+      border-radius: 20px;
+      background: linear-gradient(145deg, #6a11cb, #2575fc);
+      color: white;
+      box-shadow: 0 8px #0e0e1c;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    #clickButton:active {
+      transform: scale(0.9);
+      box-shadow: 0 4px #0e0e1c;
+    }
+
+    #stats {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    #counter {
+      font-size: 2.5rem;
+      margin: 10px;
+    }
+    #powerInfo, #levelInfo, #prestigeInfo {
+      font-size: 1.2rem;
+      margin: 5px;
+    }
+    #bonusInfo {
+      color: #ff7979;
+      margin-top: 10px;
+      height: 1.2rem;
+    }
+
+    .section {
+      width: 90%;
+      max-width: 620px;
+      background: #2f2f45;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+
+    .section h2 {
+      color: #f5f6fa;
+      margin-bottom: 12px;
+    }
+
+    .evolve-button {
+      display: inline-block;
+      padding: 12px 24px;
+      margin: 10px 8px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #12c2e9, #c471ed);
+      color: white;
+      box-shadow: 0 4px #0f0f1a;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.1s;
+    }
+    .evolve-button:hover:enabled {
+      transform: translateY(-2px);
+      background: linear-gradient(145deg, #1de9b6, #c471ed);
+    }
+    .evolve-button:disabled {
+      background: #555;
+      box-shadow: none;
+      cursor: not-allowed;
+      color: #aaa;
+    }
+
+    #bonusCountdown {
+      font-size: 1rem;
+      margin-top: 8px;
+    }
+
+    #prestigeButton {
+      background: linear-gradient(145deg, #ee0979, #ff6a00);
+      color: white;
+      padding: 10px 30px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px #660030;
+      transition: transform 0.1s, background 0.3s;
+    }
+    #prestigeButton:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(145deg, #ff416c, #ff4b2b);
+    }
+
+    #prestigeButton:disabled {
+      background: #555;
+      cursor: not-allowed;
+      color: #aaa;
+      box-shadow: none;
+    }
+
+    /* Animaciones de partículas en clic */
+    .particle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: #fffa65;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0.8;
+      animation: particleMove 600ms forwards ease-out;
+    }
+
+    @keyframes particleMove {
+      to {
+        transform: translate(var(--dx), var(--dy)) scale(0.5);
+        opacity: 0;
+      }
+    }
+
+  </style>
+</head>
+<body>
+
+  <button id="clickButton">Hacer clic</button>
+
+  <div id="stats">
+    <div id="counter">Clics: 0</div>
+    <div id="powerInfo">Poder por clic: +1</div>
+    <div id="levelInfo">Nivel: 1</div>
+    <div id="prestigeInfo">Prestigio: ×1</div>
+    <div id="bonusInfo"></div>
+  </div>
+
+  <div class="section" id="mejorasSection">
+    <h2>Mejoras de clic</h2>
+    <div id="mejorasContainer"></div>
+  </div>
+
+  <div class="section" id="autoClickSection">
+    <h2>Auto clics</h2>
+    <div id="autoClickContainer"></div>
+  </div>
+
+  <div class="section" id="bonusSection">
+    <h2>Bonus especiales</h2>
+    <div id="bonusContainer"></div>
+    <div id="bonusCountdown"></div>
+  </div>
+
+  <div class="section" id="prestigeSection">
+    <h2>Prestigio</h2>
+    <button id="prestigeButton" disabled>Prestigiar (resetear para ×2 poder)</button>
+  </div>
+
+  <script>
+    // Variables juego
+    let clics = 0;
+    let clicsTotales = 0;
+    let poderClic = 1;
+    let nivel = 1;
+    let prestigioMultiplicador = 1;
+
+    // Config mejoras clic
+    const mejoras = [
+      { nombre: 'Clic Básico', incremento: 1, costoBase: 10, multiplicadorCosto: 1.5 },
+      { nombre: 'Dedo Profesional', incremento: 5, costoBase: 100, multiplicadorCosto: 2 },
+      { nombre: 'Pulgar Turbo', incremento: 20, costoBase: 1000, multiplicadorCosto: 2.5 },
+      { nombre: 'Clicker Automático', incremento: 100, costoBase: 10000, multiplicadorCosto: 3 }
+    ];
+    let mejorasCompradas = new Array(mejoras.length).fill(0);
+
+    // Config auto clic
+    const autoClicks = [
+      { nombre: 'Robot Simple', cps: 1, costoBase: 500, multiplicadorCosto: 2 },
+      { nombre: 'Robot Avanzado', cps: 10, costoBase: 10000, multiplicadorCosto: 2.5 }
+    ];
+    let autoComprados = new Array(autoClicks.length).fill(0);
+
+    // Config bonus especiales
+    const bonuses = [
+      { nombre: 'Doble Clic 10s', duración: 10000, costo: 2000 },
+      { nombre: 'CPS doble 10s', duración: 10000, costo: 5000 },
+      { nombre: 'Millas de Clic', duración: 5000, costo: 1000, efecto: 'clics += 100 * prestigioMultiplicador' }
+    ];
+    let bonusActivo = null;
+    let bonusFin = 0;
+
+    // Prestigio
+    const prestigioRequisito = 100000; // 100 mil clics totales para prestigiar
+    let prestigioDisponible = false;
+
+    // DOM elementos
+    const clickButton = document.getElementById('clickButton');
+    const counterDiv = document.getElementById('counter');
+    const powerInfo = document.getElementById('powerInfo');
+    const levelInfo = document.getElementById('levelInfo');
+    const prestigeInfo = document.getElementById('prestigeInfo');
+    const mejorasContainer = document.getElementById('mejorasContainer');
+    const autoClickContainer = document.getElementById('autoClickContainer');
+    const bonusContainer = document.getElementById('bonusContainer');
+    const bonusCountdown = document.getElementById('bonusCountdown');
+    const prestigeButton = document.getElementById('prestigeButton');
+
+    // Función de animación de partículas al clic
+    function crearParticulas(x, y) {
+      for (let i = 0; i < 8; i++) {
+        const part = document.createElement('div');
+        part.classList.add('particle');
+        document.body.appendChild(part);
+        const angle = Math.random() * 2 * Math.PI;
+        const dist = Math.random() * 80 + 20;
+        part.style.left = x + 'px';
+        part.style.top = y + 'px';
+        part.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+        part.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
+        setTimeout(() => part.remove(), 600);
+      }
+    }
+
+    // Update visual
+    function actualizarVisual() {
+      counterDiv.innerText = `Clics: ${Math.floor(clics)}`;
+      powerInfo.innerText = `Poder por clic: +${poderClic} ×${prestigioMultiplicador}`;
+      nivel = Math.floor(clicsTotales / 1000) + 1;
+      levelInfo.innerText = `Nivel: ${nivel}`;
+      prestigeInfo.innerText = `Prestigio: ×${prestigioMultiplicador}`;
+      actualizarBotones();
+    }
+
+    // Crear botones mejoras clic
+    function crearMejoras() {
+      mejorasContainer.innerHTML = '';
+      mejoras.forEach((mejora, i) => {
+        const costo = Math.floor(mejora.costoBase * Math.pow(mejora.multiplicadorCosto, mejorasCompradas[i]));
+        const btn = document.createElement('button');
+        btn.className = 'evolve-button';
+        btn.innerText = `${mejora.nombre} +${mejora.incremento} (Costo: ${costo})`;
+        btn.disabled = clics < costo;
+        btn.addEventListener('click', () => {
+          if (clics >= costo) {
+            clics -= costo;
+            mejorasCompradas[i]++;
+            poderClic += mejora.incremento;
+            clicsTotales += mejora.incremento;
+            crearMejoras();
+            actualizarVisual();
+          }
+        });
+        mejorasContainer.appendChild(btn);
+      });
+    }
+
+    // Crear botones auto clicks
+    function crearAutoClicks() {
+      autoClickContainer.innerHTML = '';
+      autoClicks.forEach((auto, i) => {
+        const costo = Math.floor(auto.costoBase * Math.pow(auto.multiplicadorCosto, autoComprados[i]));
+        const btn = document.createElement('button');
+        btn.className = 'evolve-button';
+        btn.innerText = `${auto.nombre} +${auto.cps} CPS (Costo: ${costo})`;
+        btn.disabled = clics < costo;
+        btn.addEventListener('click', () => {
+          if (clics >= costo) {
+            clics -= costo;
+            autoComprados[i]++;
+            actualizarVisual();
+            crearAutoClicks();
+          }
+        });
+        autoClickContainer.appendChild(btn);
+      });
+    }
+
+    // Crear botones bonus
+    function crearBonuses() {
+      bonusContainer.innerHTML = '';
+      bonuses.forEach((b, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'evolve-button';
+        btn.innerText = `${b.nombre} (Costo: ${b.costo})`;
+        btn.disabled = clics < b.costo || (bonusActivo && bonusFin > Date.now());
+        btn.addEventListener('click', () => {
+          if (clics >= b.costo && (!bonusActivo || bonusFin <= Date.now())) {
+            clics -= b.costo;
+            activarBonus(i);
+            crearBonuses();
+            actualizarVisual();
+          }
+        });
+        bonusContainer.appendChild(btn);
+      });
+    }
+
+    // Manejo clic principal
+    clickButton.addEventListener('click', (e) => {
+      const ganancia = poderClic * prestigioMultiplicador * (bonusActivo && bonuses[0] && bonuses[0].nombre === 'Doble Clic 10s' ? 2 : 1);
+      clics += ganancia;
+      clicsTotales += ganancia;
+      actualizarVisual();
+      crearParticulas(e.clientX, e.clientY);
+    });
+
+    // Autoclicks que se disparan cada segundo
+    setInterval(() => {
+      let totalCPS = 0;
+      autoClicks.forEach((auto, i) => {
+        totalCPS += auto.cps * autoComprados[i];
+      });
+      if (totalCPS > 0) {
+        let ganancia = totalCPS * prestigioMultiplicador * (bonusActivo && bonuses[1] && bonuses[1].nombre === 'CPS doble 10s' ? 2 : 1);
+        clics += ganancia;
+        clicsTotales += ganancia;
+        actualizarVisual();
+      }
+    }, 1000);
+
+    // Activar bonus
+    function activarBonus(idx) {
+      bonusActivo = true;
+      bonusFin = Date.now() + bonuses[idx].duración;
+      bonusCountdown.innerText = `Bonus "${bonuses[idx].nombre}" activo por ${Math.floor(bonuses[idx].duración/1000)}s`;
+      // Si bonus tiene efecto especial inmediato:
+      if (bonuses[idx].efecto) {
+        // ejemplo de efecto tipo millas de clics
+        eval(bonuses[idx].efecto);
+      }
+      setTimeout(() => {
+        bonusActivo = false;
+        bonusCountdown.innerText = '';
+        crearBonuses();
+        actualizarVisual();
+      }, bonuses[idx].duración);
+    }
+
+    // Prestigio
+    prestigeButton.addEventListener('click', () => {
+      if (clicsTotales >= prestigioRequisito) {
+        prestigioMultiplicador *= 2;
+        // reset parcial
+        clics = 0;
+        poderClic = 1;
+        mejorasCompradas = new Array(mejoras.length).fill(0);
+        autoComprados = new Array(autoClicks.length).fill(0);
+        clicsTotales = 0;
+        actualizarVisual();
+        crearMejoras();
+        crearAutoClicks();
+        crearBonuses();
+      }
+    });
+
+    // Verifica si prestigio está disponible
+    function actualizarPrestigio() {
+      prestigeButton.disabled = clicsTotales < prestigioRequisito;
+    }
+
+    // Actualizar botones estado global
+    function actualizarBotones() {
+      crearMejoras();
+      crearAutoClicks();
+      crearBonuses();
+      actualizarPrestigio();
+    }
+
+    // Inicializar
+    crearMejoras();
+    crearAutoClicks();
+    crearBonuses();
+    actualizarVisual();
+
+  </script>
